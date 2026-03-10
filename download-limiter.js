@@ -2,6 +2,7 @@
     // 下载限制核心逻辑
     const STORAGE_KEY = 'power_audio_download_stats';
     let dailyLimit = 5; // 默认值，稍后会从 config.json 同步
+    let noticeText = ''; // 公告文字，稍后会从 config.json 同步
 
     // 获取今日日期字符串 (YYYY-MM-DD)
     function getTodayStr() {
@@ -57,10 +58,40 @@
         });
     }
 
+    // 显示公告文字
+    function displayNotice() {
+        if (!noticeText) return;
+
+        let noticeElement = document.getElementById('site-notice');
+        if (!noticeElement) {
+            noticeElement = document.createElement('div');
+            noticeElement.id = 'site-notice';
+            noticeElement.style.cssText = 'margin-top: 10px; padding: 10px; background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; border-radius: 5px; font-size: 14px; text-align: center;';
+            
+            // 尝试找到“请输入用户名和密码登录”的父元素，在其后插入
+            const loginPrompt = document.querySelector('p'); // 假设这是唯一的p标签或者第一个p标签
+            if (loginPrompt && loginPrompt.textContent.includes('请输入用户名和密码登录')) {
+                loginPrompt.parentNode.insertBefore(noticeElement, loginPrompt.nextSibling);
+            } else {
+                // 如果找不到特定元素，则尝试在 root 元素内部的某个位置插入
+                const root = document.getElementById('root');
+                if (root) {
+                    const firstChild = root.querySelector('div'); // 假设登录框是root的第一个子div
+                    if (firstChild) {
+                        firstChild.insertBefore(noticeElement, firstChild.children[2]); // 插入到标题和描述之间
+                    } else {
+                        root.appendChild(noticeElement);
+                    }
+                }
+            }
+        }
+        noticeElement.innerHTML = noticeText;
+    }
+
     // 拦截下载点击
     document.addEventListener('click', function(e) {
         const target = e.target.closest('a');
-        if (target && target.href && (target.href.includes('123pan.cn') || target.href.includes('v.123pan.cn'))) {
+        if (target && target.href && (target.href.includes('123pan.cn') || target.href.includes('v.123pan.cn') || target.href.includes('175.178.59.88:5244'))) {
             const stats = getStats();
             if (stats.count >= dailyLimit) {
                 e.preventDefault();
@@ -87,15 +118,21 @@
         fetch('config.json?t=' + Date.now())
             .then(res => res.json())
             .then(config => {
-                if (config.site && config.site.downloadLimit) {
-                    dailyLimit = parseInt(config.site.downloadLimit);
+                if (config.site) {
+                    if (config.site.downloadLimit) {
+                        dailyLimit = parseInt(config.site.downloadLimit);
+                    }
+                    if (config.site.notice) {
+                        noticeText = config.site.notice;
+                        displayNotice(); // 显示公告
+                    }
                 } else if (config.downloadLimit) {
                     dailyLimit = parseInt(config.downloadLimit);
                 }
                 updateUI();
             })
             .catch(err => {
-                console.error('无法加载下载限制配置:', err);
+                console.error('无法加载配置:', err);
                 updateUI();
             });
     }

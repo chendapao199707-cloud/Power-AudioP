@@ -4,7 +4,8 @@
     "subtitle": "一站式音频工程部署平台",
     "description": "在线网站制作V763499701",
     "version": "3.0",
-    "downloadLimit": 5
+    "downloadLimit": 5,
+    "notice": "这里是您的广告文字或下载说明，支持 HTML 标签，例如 <span style=\"color:red;\">红色文字</span>。"
   },
   "bundles": [
     {

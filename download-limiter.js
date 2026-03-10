@@ -47,7 +47,7 @@
         badge.innerHTML = `📅 今日剩余下载次数: <b style="color:${remaining > 0 ? '#4caf50' : '#ff5252'};font-size:15px;">${remaining}</b> / ${dailyLimit}`;
         
         // 根据剩余下载次数启用或禁用链接样式
-        document.querySelectorAll('a[href*="123pan.cn"], a[href*="v.123pan.cn"]').forEach(a => {
+        document.querySelectorAll('a[href*="123pan.cn"], a[href*="v.123pan.cn"], a[href*="175.178.59.88:5244"]').forEach(a => {
             if (remaining <= 0) {
                 a.style.opacity = '0.5';
                 a.style.cursor = 'not-allowed';
@@ -56,9 +56,14 @@
                 a.style.cursor = 'pointer';
             }
         });
+
+        // 持续检查并显示公告（应对 SPA 路由切换）
+        if (noticeText) {
+            displayNotice();
+        }
     }
 
-    // 显示公告文字
+    // 显示公告文字（优化版：放置在登录框顶部并美化）
     function displayNotice() {
         if (!noticeText) return;
 
@@ -66,26 +71,30 @@
         if (!noticeElement) {
             noticeElement = document.createElement('div');
             noticeElement.id = 'site-notice';
-            noticeElement.style.cssText = 'margin-top: 10px; padding: 10px; background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; border-radius: 5px; font-size: 14px; text-align: center;';
+            // 更加精致的公告样式：浅蓝色背景、深蓝色边框、圆角和阴影
+            noticeElement.style.cssText = 'margin: 15px 0; padding: 12px 16px; background-color: #e7f3ff; border: 1px solid #b3d7ff; color: #004085; border-radius: 8px; font-size: 14px; text-align: center; line-height: 1.6; box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;';
             
-            // 尝试找到“请输入用户名和密码登录”的父元素，在其后插入
-            const loginPrompt = document.querySelector('p'); // 假设这是唯一的p标签或者第一个p标签
-            if (loginPrompt && loginPrompt.textContent.includes('请输入用户名和密码登录')) {
-                loginPrompt.parentNode.insertBefore(noticeElement, loginPrompt.nextSibling);
-            } else {
-                // 如果找不到特定元素，则尝试在 root 元素内部的某个位置插入
-                const root = document.getElementById('root');
-                if (root) {
-                    const firstChild = root.querySelector('div'); // 假设登录框是root的第一个子div
-                    if (firstChild) {
-                        firstChild.insertBefore(noticeElement, firstChild.children[2]); // 插入到标题和描述之间
-                    } else {
-                        root.appendChild(noticeElement);
-                    }
+            // 查找登录框容器（通常是包含标题的那个div）
+            const loginCard = document.querySelector('div.bg-white.p-8.rounded-2xl.shadow-xl') || document.querySelector('#root > div > div');
+            if (loginCard) {
+                // 找到标题（h1）并在其下方插入公告
+                const title = loginCard.querySelector('h1');
+                if (title) {
+                    title.parentNode.insertBefore(noticeElement, title.nextSibling);
+                } else {
+                    loginCard.prepend(noticeElement);
                 }
+            } else {
+                // 兜底方案：插入到 root 顶部
+                const root = document.getElementById('root');
+                if (root) root.prepend(noticeElement);
             }
         }
-        noticeElement.innerHTML = noticeText;
+        
+        // 只有当内容发生变化时才更新 innerHTML，避免闪烁
+        if (noticeElement.innerHTML !== noticeText) {
+            noticeElement.innerHTML = noticeText;
+        }
     }
 
     // 拦截下载点击
@@ -124,7 +133,7 @@
                     }
                     if (config.site.notice) {
                         noticeText = config.site.notice;
-                        displayNotice(); // 显示公告
+                        displayNotice(); // 初始显示公告
                     }
                 } else if (config.downloadLimit) {
                     dailyLimit = parseInt(config.downloadLimit);
@@ -138,7 +147,8 @@
     }
 
     syncConfig();
-    setInterval(updateUI, 3000);
+    // 缩短刷新间隔，确保在单页应用路由切换时公告能迅速重新显示
+    setInterval(updateUI, 1000);
     
     window.resetDownloadCount = function() {
         localStorage.removeItem(STORAGE_KEY);
